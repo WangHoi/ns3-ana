@@ -1,0 +1,52 @@
+/docset/
+/html/
+/html-warn/
+/ns-3.docset
+latex/
+ns3-object.txt
+introspected-doxygen.h
+introspected-command-line.h
+doxygen.docset.conf
+doxygen.log
+doxygen.warnings.log
+*/build/
+*/source-temp/
+ns3_html_theme/static/ns3_version.js
+
+.vscode
+.lock*
+.waf*
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
