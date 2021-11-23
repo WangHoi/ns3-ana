@@ -25,17 +25,19 @@ AnaRtpTag::GetInstanceTypeId (void) const
 uint32_t
 AnaRtpTag::GetSerializedSize (void) const
 {
-  return 600;
+  return 14;
 }
 void
 AnaRtpTag::Serialize (TagBuffer i) const
 {
+  i.WriteU64 ((uint64_t)m_time);
   i.WriteU32 (m_timestamp);
   i.WriteU16 (m_seq);
 }
 void
 AnaRtpTag::Deserialize (TagBuffer i)
 {
+  m_time = (int64_t) i.ReadU64 ();
   m_timestamp = i.ReadU32 ();
   m_seq = i.ReadU16 ();
 }

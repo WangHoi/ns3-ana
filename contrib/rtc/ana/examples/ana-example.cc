@@ -19,8 +19,8 @@ main (int argc, char *argv[])
   nodes.Create (2);
 
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("64Kbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("3ms"));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("16Kbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("50ms"));
 
   NetDeviceContainer devices;
   devices = pointToPoint.Install (nodes);

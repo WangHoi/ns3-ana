@@ -19,6 +19,7 @@ public:
   virtual void Deserialize (TagBuffer i);
   virtual void Print (std::ostream &os) const;
 
+  int64_t m_time;
   uint32_t m_timestamp; //!< 48khz
   uint16_t m_seq;
 };

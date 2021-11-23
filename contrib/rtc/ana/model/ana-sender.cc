@@ -8,6 +8,9 @@ namespace ns3 {
 namespace {
 static const uint64_t SEND_INTERVAL = 20;
 static const uint64_t FS_MULT = 48;
+static const uint16_t OVERHEAD = 2 + 20 + 8; //!< P2P-header + IP-header + UDP-header
+static const Time BWCTL_INTERVAL = Seconds (1);
+static const size_t CWND = 1024;
 }
 
 NS_LOG_COMPONENT_DEFINE ("AnaSenderApplication");
@@ -43,6 +46,8 @@ AnaSender::Setup (Ptr<UdpSocket> socket, Address address, uint32_t packetSize, u
   m_dataRate = dataRate;
 
   m_socket->SetRecvCallback (MakeCallback (&AnaSender::HandleRead, this));
+  m_packetHistory = CreateObject<SendPacketHistory> (Seconds (15), 100);
+  m_inflightDataSizeHistory = CreateObject<HistoryBuffer<size_t> > (30);
 }
 
 void
@@ -73,14 +78,33 @@ AnaSender::StopApplication ()
 void
 AnaSender::SendPacket ()
 {
-  Ptr<Packet> packet = Create<Packet> (m_packetSize);
-  AnaRtpTag tag;
-  tag.m_seq = m_nextSeq;
-  tag.m_timestamp = (uint32_t) m_nextTimestamp;
-  packet->AddPacketTag (tag);
-  m_socket->Send (packet);
+  const Time now = Simulator::Now ();
+  m_inflightDataSizeHistory->Add (m_packetHistory->m_inflightDataSize);
+  if (now - m_lastBWctrlTime >= BWCTL_INTERVAL) {
+    if (m_inflightDataSizeHistory->GetAvg () > CWND + CWND / 5) {
+      m_lastBWctrlAction = BWctrlAction::DECR;
+    } else if (m_inflightDataSizeHistory->GetAvg () < CWND - CWND / 5) {
+      m_lastBWctrlAction = BWctrlAction::INCR;
+    }
+    NS_LOG_UNCOND (now.As (Time::S) << " Action !" << (m_lastBWctrlAction == BWctrlAction::DECR));
+    m_lastBWctrlTime = now;
+  }
 
-  ++m_nextSeq;
+  if (m_lastBWctrlAction != BWctrlAction::DECR) {
+    Ptr<Packet> packet = Create<Packet> (m_packetSize);
+    AnaRtpTag tag;
+    tag.m_time = now.GetMicroSeconds ();
+    tag.m_seq = m_nextSeq;
+    tag.m_timestamp = (uint32_t) m_nextTimestamp;
+    m_packetHistory->Prepare (now, tag, m_packetSize);
+    packet->AddPacketTag (tag);
+    m_socket->Send (packet);
+
+    ++m_nextSeq;
+  } else {
+    NS_LOG_UNCOND ("Skip " << m_nextTimestamp / 48);
+  }
+
   m_nextTimestamp += SEND_INTERVAL * FS_MULT;
 
   if (++m_packetsSent < m_nPackets)
@@ -118,6 +142,7 @@ AnaSender::HandleRead (Ptr<Socket> socket)
       AnaFeedbackTag tag;
       if (packet->PeekPacketTag (tag))
         {
+          m_packetHistory->Update (Simulator::Now (), tag);
           auto maxSeq = tag.GetMaxSeq ();
           auto inflight = m_nextSeq - 1 - maxSeq;
           NS_LOG_UNCOND ("Inflight " << inflight << " packets.");
@@ -130,7 +155,7 @@ SendPacketHistory::SendPacketHistory (Time timeThrehold, uint16_t seqThrehold)
 {
 }
 void
-SendPacketHistory::Prepare (Time time, const AnaRtpTag &tag)
+SendPacketHistory::Prepare (Time time, const AnaRtpTag &tag, uint16_t packetSize)
 {
   while (!m_queue.empty ())
     {
@@ -144,8 +169,10 @@ SendPacketHistory::Prepare (Time time, const AnaRtpTag &tag)
           break;
         }
     }
-  m_queue.push_back ({time, Time (), tag});
+  uint16_t dataSize = OVERHEAD + packetSize;
+  m_queue.push_back ({time, Time (), tag, dataSize});
   ++m_packetCount;
+  m_inflightDataSize += dataSize;
   
   // track highest sequence number
   if (m_packetCount == 1)

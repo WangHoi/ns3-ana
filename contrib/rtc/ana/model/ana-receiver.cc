@@ -63,10 +63,11 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
   Address localAddress;
   while ((packet = socket->RecvFrom (from)))
     {
+      const Time now = Simulator::Now ();
       socket->GetSockName (localAddress);
       // m_rxTrace (packet);
       // m_rxTraceWithAddresses (packet, from, localAddress);
-      NS_LOG_INFO ("At time " << Simulator::Now ().As (Time::S) << " server received "
+      NS_LOG_INFO ("At time " << now.As (Time::S) << " server received "
                               << packet->GetSize () << " bytes from "
                               << InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port "
                               << InetSocketAddress::ConvertFrom (from).GetPort ());
@@ -74,13 +75,16 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
       AnaRtpTag rtpTag;
       if (packet->PeekPacketTag (rtpTag))
         {
-          m_packetHistory->Add (Simulator::Now (), rtpTag);
+          Time delay = now - MicroSeconds (rtpTag.m_time);
+          NS_LOG_UNCOND (rtpTag.m_timestamp / 48 << " Delay " << delay.As (Time::MS));
+          m_packetHistory->Add (now, rtpTag);
         }
 
       packet->RemoveAllPacketTags ();
       packet->RemoveAllByteTags ();
 
       NS_LOG_LOGIC ("Echoing packet");
+      packet = Create<Packet> (0);
       AnaFeedbackTag feedbackTag;
       if (m_packetHistory->GetFeedback (feedbackTag))
         {

@@ -18,6 +18,7 @@ ns3_html_theme/static/ns3_version.js
 build/
 *.pyc
 *.swp
+__pycache__/
 
 # Prerequisites
 *.d

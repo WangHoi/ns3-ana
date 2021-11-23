@@ -12,15 +12,19 @@
 
 namespace ns3 {
 
+class SendPacketHistory;
+template <typename>
+class HistoryBuffer;
 class AnaSender : public Application
 {
 public:
   static TypeId GetTypeId ();
-  
+
   AnaSender ();
   virtual ~AnaSender () override;
-  
-  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
+
+  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t packetSize, uint32_t nPackets,
+              DataRate dataRate);
 
 private:
   virtual void StartApplication () override;
@@ -37,9 +41,18 @@ private:
   EventId m_sendEvent;
   bool m_running = false;
   uint32_t m_packetsSent = 0;
-  
+
   uint16_t m_nextSeq = 0;
   uint64_t m_nextTimestamp = 0;
+  Ptr<SendPacketHistory> m_packetHistory;
+  Ptr<HistoryBuffer<size_t> > m_inflightDataSizeHistory;
+  Time m_lastBWctrlTime;
+  enum class BWctrlAction {
+    KEEP,
+    INCR,
+    DECR,
+  };
+  BWctrlAction m_lastBWctrlAction = BWctrlAction::KEEP;
 };
 
 struct SendPacketInfo
@@ -47,6 +60,7 @@ struct SendPacketInfo
   ns3::Time sendTime;
   ns3::Time ackTime;
   AnaRtpTag tag;
+  uint16_t dataSize;
 };
 class SendPacketHistory : public Object
 {
@@ -54,7 +68,7 @@ public:
   SendPacketHistory (Time timeThrehold, uint16_t seqThrehold);
   ~SendPacketHistory () = default;
 
-  void Prepare (Time time, const AnaRtpTag &tag);
+  void Prepare (Time time, const AnaRtpTag &tag, uint16_t packetSize);
   void Update (Time time, const AnaFeedbackTag &tag);
 
   std::deque<SendPacketInfo> m_queue;
@@ -62,11 +76,75 @@ public:
   const uint16_t m_seqThrehold;
   uint64_t m_packetCount = 0;
   uint16_t m_maxSeq = 0;
+  size_t m_inflightDataSize = 0;
 
 private:
-  SendPacketInfo *FindPacket(uint16_t seq);
+  SendPacketInfo *FindPacket (uint16_t seq);
 };
+template <typename T>
+class HistoryBuffer : public Object
+{
+public:
+  HistoryBuffer (size_t max) : m_max (max)
+  {
+  }
+  void
+  Clear ()
+  {
+    m_queue.clear ();
+  }
+  void
+  Add (T value)
+  {
+    if (m_queue.size () >= m_max)
+      {
+        m_queue.pop_front ();
+      }
+    m_queue.push_back (value);
+  }
+  T
+  GetMin () const
+  {
+    T min = std::numeric_limits<T>::max ();
+    for (auto v : m_queue)
+      {
+        if (v < min)
+          {
+            min = v;
+          }
+      }
+    return min;
+  }
+  T
+  GetMax () const
+  {
+    T max = std::numeric_limits<T>::min ();
+    for (auto v : m_queue)
+      {
+        if (v > max)
+          {
+            max = v;
+          }
+      }
+    return max;
+  }
+  T
+  GetAvg () const
+  {
+    NS_ASSERT (!m_queue.empty ());
+    int64_t total = 0;
+    for (auto v : m_queue)
+      {
+        total += static_cast<int64_t> (v);
+      }
+    NS_LOG_UNCOND ("Avg " << total << " " << m_queue.size ());
+    return static_cast<T> (total / m_queue.size ());
+  }
 
+private:
+  std::deque<T> m_queue;
+  size_t m_max;
+};
 } // namespace ns3
 
 #endif /* ANA_SENDER_H */
