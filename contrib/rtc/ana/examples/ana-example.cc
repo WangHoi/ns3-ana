@@ -19,15 +19,15 @@ main (int argc, char *argv[])
   nodes.Create (2);
 
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("16Kbps"));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("100Kbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("50ms"));
 
   NetDeviceContainer devices;
   devices = pointToPoint.Install (nodes);
 
-  Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();
-  em->SetAttribute ("ErrorRate", DoubleValue (0.00001));
-  devices.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
+  // Ptr<RateErrorModel> em = CreateObject<RateErrorModel> ();
+  // em->SetAttribute ("ErrorRate", DoubleValue (0.00001));
+  // devices.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
 
   InternetStackHelper stack;
   stack.Install (nodes);
@@ -42,7 +42,7 @@ main (int argc, char *argv[])
   anaReceiver->Setup (serverPort);
   nodes.Get (1)->AddApplication(anaReceiver);
   anaReceiver->SetStartTime (Seconds (0.));
-  anaReceiver->SetStopTime (Seconds (20.));
+  anaReceiver->SetStopTime (Seconds (100.));
 
   Ptr<UdpSocket> clientSocket = StaticCast<UdpSocket> (Socket::CreateSocket (nodes.Get (0), UdpSocketFactory::GetTypeId ()));
   // clientSocket->TraceConnectWithoutContext ("CongestionWindow", MakeCallback (&CwndChange));
@@ -51,12 +51,12 @@ main (int argc, char *argv[])
   anaSender->Setup (clientSocket, serverAddress, 130, 1000, DataRate ("1Mbps"));
   nodes.Get (0)->AddApplication (anaSender);
   anaSender->SetStartTime (Seconds (1.));
-  anaSender->SetStopTime (Seconds (20.));
+  anaSender->SetStopTime (Seconds (100.));
 
   // devices.Get (1)->TraceConnectWithoutContext ("PhyRxDrop", MakeCallback (&RxDrop));
   pointToPoint.EnablePcapAll ("ana", false);
 
-  Simulator::Stop (Seconds (20));
+  Simulator::Stop (Seconds (100));
 
   Simulator::Run ();
   Simulator::Destroy ();

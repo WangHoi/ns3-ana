@@ -67,16 +67,16 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
       socket->GetSockName (localAddress);
       // m_rxTrace (packet);
       // m_rxTraceWithAddresses (packet, from, localAddress);
-      NS_LOG_INFO ("At time " << now.As (Time::S) << " server received "
-                              << packet->GetSize () << " bytes from "
-                              << InetSocketAddress::ConvertFrom (from).GetIpv4 () << " port "
-                              << InetSocketAddress::ConvertFrom (from).GetPort ());
+      NS_LOG_INFO ("At time " << now.As (Time::S) << " server received " << packet->GetSize ()
+                              << " bytes from " << InetSocketAddress::ConvertFrom (from).GetIpv4 ()
+                              << " port " << InetSocketAddress::ConvertFrom (from).GetPort ());
 
       AnaRtpTag rtpTag;
       if (packet->PeekPacketTag (rtpTag))
         {
           Time delay = now - MicroSeconds (rtpTag.m_time);
-          NS_LOG_UNCOND (rtpTag.m_timestamp / 48 << " Delay " << delay.As (Time::MS));
+          NS_LOG_UNCOND (now.As (Time::MS) << " Recv Timestamp: " << rtpTag.m_timestamp << " Seq "
+                                           << rtpTag.m_seq << " Delay " << delay.As (Time::MS));
           m_packetHistory->Add (now, rtpTag);
         }
 
@@ -84,7 +84,7 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
       packet->RemoveAllByteTags ();
 
       NS_LOG_LOGIC ("Echoing packet");
-      packet = Create<Packet> (0);
+      // packet = Create<Packet> (0);
       AnaFeedbackTag feedbackTag;
       if (m_packetHistory->GetFeedback (feedbackTag))
         {
@@ -122,7 +122,7 @@ RecvPacketHistory::Add (Time time, const AnaRtpTag &tag)
     }
   m_queue.push_back ({time, tag});
   ++m_packetCount;
-  
+
   // track highest sequence number
   if (m_packetCount == 1)
     {

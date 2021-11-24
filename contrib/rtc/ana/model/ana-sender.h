@@ -23,7 +23,7 @@ public:
   AnaSender ();
   virtual ~AnaSender () override;
 
-  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t packetSize, uint32_t nPackets,
+  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t maxPacketSize, uint32_t nPackets,
               DataRate dataRate);
 
 private:
@@ -35,6 +35,7 @@ private:
 
   Ptr<UdpSocket> m_socket;
   Address m_peer;
+  uint32_t m_maxPacketSize = 0;
   uint32_t m_packetSize = 0;
   uint32_t m_nPackets = 0;
   DataRate m_dataRate;
@@ -51,8 +52,24 @@ private:
     KEEP,
     INCR,
     DECR,
+    PAUSE,
   };
   BWctrlAction m_lastBWctrlAction = BWctrlAction::KEEP;
+
+  static const char *BWctrlActionStr(BWctrlAction action)
+  {
+    switch (action) {
+    case BWctrlAction::KEEP:
+      return "KEEP";
+    case BWctrlAction::INCR:
+      return "INCR";
+    case BWctrlAction::DECR:
+      return "DECR";
+    case BWctrlAction::PAUSE:
+      return "PAUSE";
+    }
+    NS_ASSERT(0);
+  }
 };
 
 struct SendPacketInfo
@@ -65,12 +82,13 @@ struct SendPacketInfo
 class SendPacketHistory : public Object
 {
 public:
-  SendPacketHistory (Time timeThrehold, uint16_t seqThrehold);
+  SendPacketHistory (AnaSender *sender, Time timeThrehold, uint16_t seqThrehold);
   ~SendPacketHistory () = default;
 
-  void Prepare (Time time, const AnaRtpTag &tag, uint16_t packetSize);
-  void Update (Time time, const AnaFeedbackTag &tag);
+  void PacketSent (Time time, const AnaRtpTag &tag, uint16_t packetSize);
+  void TransportFeedback (Time time, const AnaFeedbackTag &tag);
 
+  AnaSender *m_sender;
   std::deque<SendPacketInfo> m_queue;
   const Time m_timeThrehold;
   const uint16_t m_seqThrehold;
@@ -96,6 +114,7 @@ public:
   void
   Add (T value)
   {
+    // NS_LOG_UNCOND (Simulator::Now ().As (Time::MS) << " Add " << value);
     if (m_queue.size () >= m_max)
       {
         m_queue.pop_front ();
@@ -137,7 +156,7 @@ public:
       {
         total += static_cast<int64_t> (v);
       }
-    NS_LOG_UNCOND ("Avg " << total << " " << m_queue.size ());
+    // NS_LOG_UNCOND ("Avg " << total << " " << m_queue.size ());
     return static_cast<T> (total / m_queue.size ());
   }
 
