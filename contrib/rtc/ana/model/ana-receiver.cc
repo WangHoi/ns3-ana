@@ -77,6 +77,7 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
           Time delay = now - MicroSeconds (rtpTag.m_time);
           NS_LOG_UNCOND (now.As (Time::MS) << " Recv Timestamp: " << rtpTag.m_timestamp << " Seq "
                                            << rtpTag.m_seq << " Delay " << delay.As (Time::MS));
+          m_delayCb(delay.GetMilliSeconds());
           m_packetHistory->Add (now, rtpTag);
         }
 

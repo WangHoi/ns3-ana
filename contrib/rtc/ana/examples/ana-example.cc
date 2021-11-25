@@ -2,6 +2,7 @@
 
 #include "ns3/core-module.h"
 #include "ns3/ana-helper.h"
+#include "ns3/mytrace.h"
 
 using namespace ns3;
 
@@ -19,7 +20,7 @@ main (int argc, char *argv[])
   nodes.Create (2);
 
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("100Kbps"));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("40Kbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("50ms"));
 
   NetDeviceContainer devices;
@@ -57,6 +58,11 @@ main (int argc, char *argv[])
   pointToPoint.EnablePcapAll ("ana", false);
 
   Simulator::Stop (Seconds (100));
+
+  MyTracer tracer;
+  tracer.OpenTraceFile("ana");
+  anaSender->SetRateCallback(MakeCallback (&MyTracer::RateTrace, &tracer));
+  anaReceiver->SetDelayCallback(MakeCallback (&MyTracer::DelayTrace, &tracer));
 
   Simulator::Run ();
   Simulator::Destroy ();

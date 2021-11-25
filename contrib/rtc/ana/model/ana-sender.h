@@ -25,6 +25,13 @@ public:
 
   void Setup (Ptr<UdpSocket> socket, Address address, uint32_t maxPacketSize, uint32_t nPackets,
               DataRate dataRate);
+  using RateCallback = Callback<void, int64_t>;
+  void
+  SetRateCallback(RateCallback cb)
+  {
+    m_rateCb = cb;
+  }
+  int64_t GetSendRate() const;
 
 private:
   virtual void StartApplication () override;
@@ -55,6 +62,7 @@ private:
     PAUSE,
   };
   BWctrlAction m_lastBWctrlAction = BWctrlAction::KEEP;
+  RateCallback m_rateCb;
 
   static const char *BWctrlActionStr(BWctrlAction action)
   {

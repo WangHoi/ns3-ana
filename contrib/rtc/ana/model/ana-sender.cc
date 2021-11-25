@@ -79,11 +79,25 @@ AnaSender::StopApplication ()
       m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket>> ());
     }
 }
+int64_t
+AnaSender::GetSendRate() const
+{
+  return (m_packetSize + PACKET_OVERHEAD) * 8 * 1000 / SEND_INTERVAL;
+}
+
 void
 AnaSender::SendPacket ()
 {
   const Time now = Simulator::Now ();
   m_inflightDataSizeHistory->Add (m_packetHistory->m_inflightDataSize);
+
+  if (m_packetsSent == 0)
+    {
+      NS_LOG_UNCOND (now.As (Time::S) << " Action " << BWctrlActionStr (m_lastBWctrlAction)
+                                      << " PacketSize " << m_packetSize);
+      m_rateCb (GetSendRate ());
+    }
+
   if (now - m_lastBWctrlTime >= BWCTL_INTERVAL)
     {
       if (m_inflightDataSizeHistory->GetAvg () > CWND + CWND)
@@ -93,7 +107,7 @@ AnaSender::SendPacket ()
       else if (m_inflightDataSizeHistory->GetAvg () > CWND + CWND / 5)
         {
           m_lastBWctrlAction = BWctrlAction::DECR;
-          m_packetSize = std::min (m_maxPacketSize, std::max (MIN_PACKET_SIZE, m_packetSize / 2));
+          m_packetSize = std::min (m_maxPacketSize, std::max (MIN_PACKET_SIZE, m_packetSize - m_packetSize / 4));
         }
       else if (m_inflightDataSizeHistory->GetAvg () < CWND - CWND / 5)
         {
@@ -105,8 +119,10 @@ AnaSender::SendPacket ()
         {
           m_lastBWctrlAction = BWctrlAction::KEEP;
         }
-      NS_LOG_UNCOND (now.As (Time::S) << " Action " << BWctrlActionStr(m_lastBWctrlAction) << " PacketSize " << m_packetSize);
+      NS_LOG_UNCOND (now.As (Time::S) << " Action " << BWctrlActionStr (m_lastBWctrlAction)
+                                      << " PacketSize " << m_packetSize);
       m_lastBWctrlTime = now;
+      m_rateCb (GetSendRate ());
     }
 
   if (m_lastBWctrlAction != BWctrlAction::PAUSE)

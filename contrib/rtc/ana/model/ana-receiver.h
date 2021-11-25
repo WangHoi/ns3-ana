@@ -19,6 +19,12 @@ public:
   static TypeId GetTypeId (void);
 
   void Setup (uint16_t port);
+  using DelayCallback = Callback<void, int64_t>;
+  void
+  SetDelayCallback (DelayCallback cb)
+  {
+    m_delayCb = cb;
+  }
 
 private:
   virtual void StartApplication () override;
@@ -28,6 +34,7 @@ private:
   uint16_t m_port; //!< Port on which we listen for incoming packets.
   Ptr<UdpSocket> m_socket; //!< IPv4 Socket
   Ptr<RecvPacketHistory> m_packetHistory;
+  DelayCallback m_delayCb;
 };
 
 struct RecvPacketInfo
