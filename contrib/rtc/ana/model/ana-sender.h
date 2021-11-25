@@ -95,6 +95,7 @@ public:
 
   void PacketSent (Time time, const AnaRtpTag &tag, uint16_t packetSize);
   void TransportFeedback (Time time, const AnaFeedbackTag &tag);
+  void Tick (Time time);
 
   AnaSender *m_sender;
   std::deque<SendPacketInfo> m_queue;
@@ -103,6 +104,7 @@ public:
   uint64_t m_packetCount = 0;
   uint16_t m_maxSeq = 0;
   size_t m_inflightDataSize = 0;
+  size_t m_lossCount = 0;
 
 private:
   SendPacketInfo *FindPacket (uint16_t seq);

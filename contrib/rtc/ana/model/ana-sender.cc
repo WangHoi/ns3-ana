@@ -11,7 +11,7 @@ static const uint64_t SEND_INTERVAL = 20;
 static const uint64_t FS_MULT = 48;
 static const uint16_t PACKET_OVERHEAD = 2 + 20 + 8; //!< P2P-header + IP-header + UDP-header
 static const Time BWCTL_INTERVAL = MilliSeconds (500);
-static const size_t CWND = 1024;
+static const size_t CWND = 1500;
 static const uint32_t MIN_PACKET_SIZE = 20; // 8kbps
 static const uint32_t PACKET_SIZE_STEP = 5; // 2kbps
 } // namespace
@@ -80,7 +80,7 @@ AnaSender::StopApplication ()
     }
 }
 int64_t
-AnaSender::GetSendRate() const
+AnaSender::GetSendRate () const
 {
   return (m_packetSize + PACKET_OVERHEAD) * 8 * 1000 / SEND_INTERVAL;
 }
@@ -89,6 +89,7 @@ void
 AnaSender::SendPacket ()
 {
   const Time now = Simulator::Now ();
+  m_packetHistory->Tick (now);
   m_inflightDataSizeHistory->Add (m_packetHistory->m_inflightDataSize);
 
   if (m_packetsSent == 0)
@@ -107,7 +108,8 @@ AnaSender::SendPacket ()
       else if (m_inflightDataSizeHistory->GetAvg () > CWND + CWND / 5)
         {
           m_lastBWctrlAction = BWctrlAction::DECR;
-          m_packetSize = std::min (m_maxPacketSize, std::max (MIN_PACKET_SIZE, m_packetSize - m_packetSize / 4));
+          m_packetSize = std::min (m_maxPacketSize,
+                                   std::max (MIN_PACKET_SIZE, m_packetSize - m_packetSize / 3));
         }
       else if (m_inflightDataSizeHistory->GetAvg () < CWND - CWND / 5)
         {
@@ -135,7 +137,7 @@ AnaSender::SendPacket ()
       packet->AddPacketTag (tag);
       m_socket->Send (packet);
       m_packetHistory->PacketSent (now, tag, m_packetSize);
-      NS_LOG_UNCOND (now.As (Time::MS) << " Send " << m_nextTimestamp);
+      NS_LOG_UNCOND (now.As (Time::MS) << " Send Seq " << tag.m_seq);
 
       ++m_nextSeq;
     }
@@ -184,7 +186,8 @@ AnaSender::HandleRead (Ptr<Socket> socket)
           m_packetHistory->TransportFeedback (Simulator::Now (), tag);
           auto maxSeq = tag.GetMaxSeq ();
           auto inflight = m_nextSeq - 1 - maxSeq;
-          NS_LOG_UNCOND ("Inflight " << inflight << " packets.");
+          NS_LOG_UNCOND ("Inflight " << inflight << "p, Size "
+                                     << m_packetHistory->m_inflightDataSize);
         }
     }
 }
@@ -192,6 +195,19 @@ AnaSender::HandleRead (Ptr<Socket> socket)
 SendPacketHistory::SendPacketHistory (AnaSender *sender, Time timeThrehold, uint16_t seqThrehold)
     : m_sender (sender), m_timeThrehold (timeThrehold), m_seqThrehold (seqThrehold)
 {
+}
+void
+SendPacketHistory::Tick (Time time)
+{
+  for (auto &p : m_queue)
+    {
+      if (p.ackTime.IsZero () && time - p.sendTime >= MilliSeconds (1000))
+        {
+          p.ackTime = time;
+          m_inflightDataSize -= p.dataSize;
+          ++m_lossCount;
+        }
+    }
 }
 void
 SendPacketHistory::PacketSent (Time time, const AnaRtpTag &tag, uint16_t packetSize)
@@ -231,15 +247,60 @@ void
 SendPacketHistory::TransportFeedback (Time time, const AnaFeedbackTag &tag)
 {
   NS_LOG_UNCOND (time.As (Time::MS) << " Feedback: AckSeq " << tag.GetMaxSeq ());
+  auto max_seq = tag.GetMaxSeq ();
+  WrapComp<uint16_t> seq_comp;
+  for (auto &p : m_queue)
+    {
+      if (p.tag.m_seq == max_seq)
+        {
+          if (p.ackTime.IsZero ())
+            {
+              p.ackTime = time;
+              m_inflightDataSize -= p.dataSize;
+            }
+          else
+            {
+              // --m_lossCount;
+            }
+          break;
+        }
+
+      if (seq_comp(p.tag.m_seq, max_seq))
+        {
+          continue;
+          /*
+          if (p.ackTime.IsZero ())
+            {
+              p.ackTime = time;
+              m_inflightDataSize -= p.dataSize;
+            }
+          else
+            {
+              // --m_lossCount;
+            }
+          */
+        }
+      else
+        break;
+    }
+  /*
   for (auto seq : tag.m_ackSeq)
     {
       auto p = FindPacket (seq);
-      if (p && p->ackTime.IsZero ())
+      if (p)
         {
-          p->ackTime = time;
-          m_inflightDataSize -= p->dataSize;
+          if (p->ackTime.IsZero ())
+            {
+              p->ackTime = time;
+              m_inflightDataSize -= p->dataSize;
+            }
+          else
+            {
+              // --m_lossCount;
+            }
         }
     }
+  */
 }
 SendPacketInfo *
 SendPacketHistory::FindPacket (uint16_t seq)
