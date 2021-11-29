@@ -31,12 +31,24 @@ public:
   {
     m_rateCb = cb;
   }
+  void
+  SetRateAckCallback(RateCallback cb)
+  {
+    m_rateAckCb = cb;
+  }
   int64_t GetSendRate() const;
+  using RttCallback = Callback<void, int64_t>;
+  void
+  SetRttCallback (RttCallback cb)
+  {
+    m_rttCb = cb;
+  }
 
 private:
   virtual void StartApplication () override;
   virtual void StopApplication () override;
   void SendPacket ();
+  void Tick ();
   void ScheduleTx ();
   void HandleRead (Ptr<Socket> socket);
 
@@ -47,6 +59,7 @@ private:
   uint32_t m_nPackets = 0;
   DataRate m_dataRate;
   EventId m_sendEvent;
+  EventId m_tickEvent;
   bool m_running = false;
   uint32_t m_packetsSent = 0;
 
@@ -63,6 +76,9 @@ private:
   };
   BWctrlAction m_lastBWctrlAction = BWctrlAction::KEEP;
   RateCallback m_rateCb;
+  RateCallback m_rateAckCb;
+  RttCallback m_rttCb;
+  friend class SendPacketHistory;
 
   static const char *BWctrlActionStr(BWctrlAction action)
   {
@@ -86,6 +102,7 @@ struct SendPacketInfo
   ns3::Time ackTime;
   AnaRtpTag tag;
   uint16_t dataSize;
+  bool timeoutLoss;
 };
 class SendPacketHistory : public Object
 {
@@ -95,7 +112,7 @@ public:
 
   void PacketSent (Time time, const AnaRtpTag &tag, uint16_t packetSize);
   void TransportFeedback (Time time, const AnaFeedbackTag &tag);
-  void Tick (Time time);
+  void CheckLoss (Time time);
 
   AnaSender *m_sender;
   std::deque<SendPacketInfo> m_queue;
@@ -104,7 +121,9 @@ public:
   uint64_t m_packetCount = 0;
   uint16_t m_maxSeq = 0;
   size_t m_inflightDataSize = 0;
+  size_t m_newlyAckDataSize = 0;
   size_t m_lossCount = 0;
+  size_t m_falseLossCount = 0;
 
 private:
   SendPacketInfo *FindPacket (uint16_t seq);

@@ -8,6 +8,8 @@ NS_LOG_COMPONENT_DEFINE ("AnaReceiverApplication");
 
 NS_OBJECT_ENSURE_REGISTERED (AnaReceiver);
 
+static const uint64_t TICK_INTERVAL = 1000;
+
 TypeId
 AnaReceiver::GetTypeId ()
 {
@@ -22,6 +24,14 @@ void
 AnaReceiver::Setup (uint16_t port)
 {
   m_port = port;
+}
+void
+AnaReceiver::Tick ()
+{
+  int64_t rate = m_recvDataSize * 8000 / TICK_INTERVAL;
+  m_rateCb(rate);
+  m_recvDataSize = 0;
+  m_tickEvent = Simulator::Schedule (MilliSeconds (TICK_INTERVAL), &AnaReceiver::Tick, this);
 }
 void
 AnaReceiver::StartApplication ()
@@ -41,6 +51,7 @@ AnaReceiver::StartApplication ()
 
   m_socket->SetRecvCallback (MakeCallback (&AnaReceiver::HandleRead, this));
   m_packetHistory = Create<RecvPacketHistory> (Seconds (15), 32);
+  Tick ();
 }
 void
 AnaReceiver::StopApplication ()
@@ -51,6 +62,10 @@ AnaReceiver::StopApplication ()
     {
       m_socket->Close ();
       m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket>> ());
+    }
+  if (m_tickEvent.IsRunning ())
+    {
+      Simulator::Cancel (m_tickEvent);
     }
 }
 void
@@ -70,6 +85,8 @@ AnaReceiver::HandleRead (Ptr<Socket> socket)
       NS_LOG_INFO ("At time " << now.As (Time::S) << " server received " << packet->GetSize ()
                               << " bytes from " << InetSocketAddress::ConvertFrom (from).GetIpv4 ()
                               << " port " << InetSocketAddress::ConvertFrom (from).GetPort ());
+
+      m_recvDataSize += ANA_PACKET_OVERHEAD + packet->GetSize ();
 
       AnaRtpTag rtpTag;
       if (packet->PeekPacketTag (rtpTag))

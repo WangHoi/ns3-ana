@@ -5,6 +5,10 @@
 
 namespace ns3 {
 
+enum {
+  ANA_PACKET_OVERHEAD = 2 + 20 + 8, //!< P2P-header + IP-header + UDP-header
+};
+
 class AnaRtpTag : public Tag
 {
 public:

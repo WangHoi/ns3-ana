@@ -21,6 +21,7 @@ def build(bld):
     module = bld.create_ns3_module('mytrace', ['core'])
     module.source = [
         'model/mytrace.cc',
+        'model/bwtrace.cc',
         ]
 
     module.defines = ['NS3_ASSERT_ENABLE', 'NS3_LOG_ENABLE']
@@ -29,5 +30,6 @@ def build(bld):
     headers.module = 'mytrace'
     headers.source = [
         'model/mytrace.h',
+        'model/bwtrace.h',
        ]
 

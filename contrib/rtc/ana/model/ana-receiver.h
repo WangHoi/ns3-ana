@@ -25,6 +25,13 @@ public:
   {
     m_delayCb = cb;
   }
+  using RateCallback = Callback<void, int64_t>;
+  void
+  SetRateCallback (RateCallback cb)
+  {
+    m_rateCb = cb;
+  }
+  void Tick ();
 
 private:
   virtual void StartApplication () override;
@@ -35,6 +42,9 @@ private:
   Ptr<UdpSocket> m_socket; //!< IPv4 Socket
   Ptr<RecvPacketHistory> m_packetHistory;
   DelayCallback m_delayCb;
+  RateCallback m_rateCb;
+  EventId m_tickEvent;
+  int64_t m_recvDataSize = 0;
 };
 
 struct RecvPacketInfo
