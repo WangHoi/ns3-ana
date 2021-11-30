@@ -22,6 +22,7 @@ __pycache__/
 *.pcap
 *.tr
 *.log
+*.svg
 /traces/
 
 # Prerequisites

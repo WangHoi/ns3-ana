@@ -6,8 +6,8 @@ namespace ns3 {
 
 AnaSenderHelper::AnaSenderHelper (uint16_t port)
 {
-  // m_factory.SetTypeId (AnaSender::GetTypeId ());
-  // SetAttribute ("Port", UintegerValue (port));
+  m_factory.SetTypeId (AnaSender::GetTypeId ());
+  SetAttribute ("Port", UintegerValue (port));
 }
 
 void 

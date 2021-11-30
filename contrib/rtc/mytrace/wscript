@@ -22,6 +22,7 @@ def build(bld):
     module.source = [
         'model/mytrace.cc',
         'model/bwtrace.cc',
+        'model/losstrace.cc',
         ]
 
     module.defines = ['NS3_ASSERT_ENABLE', 'NS3_LOG_ENABLE']
@@ -31,5 +32,6 @@ def build(bld):
     headers.source = [
         'model/mytrace.h',
         'model/bwtrace.h',
+        'model/losstrace.h',
        ]
 

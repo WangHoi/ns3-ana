@@ -23,8 +23,7 @@ public:
   AnaSender ();
   virtual ~AnaSender () override;
 
-  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t maxPacketSize, uint32_t nPackets,
-              DataRate dataRate);
+  void Setup (Ptr<UdpSocket> socket, Address address, uint32_t maxPacketSize, uint32_t nPackets);
   using RateCallback = Callback<void, int64_t>;
   void
   SetRateCallback(RateCallback cb)
@@ -43,6 +42,12 @@ public:
   {
     m_rttCb = cb;
   }
+  using LossRateCallback = Callback<void, double>;
+  void
+  SetLossRateCallback (LossRateCallback cb)
+  {
+    m_lossRateCb = cb;
+  }
 
 private:
   virtual void StartApplication () override;
@@ -57,11 +62,11 @@ private:
   uint32_t m_maxPacketSize = 0;
   uint32_t m_packetSize = 0;
   uint32_t m_nPackets = 0;
-  DataRate m_dataRate;
   EventId m_sendEvent;
   EventId m_tickEvent;
   bool m_running = false;
   uint32_t m_packetsSent = 0;
+  double m_lossRate = 0.0;
 
   uint16_t m_nextSeq = 0;
   uint64_t m_nextTimestamp = 0;
@@ -78,6 +83,7 @@ private:
   RateCallback m_rateCb;
   RateCallback m_rateAckCb;
   RttCallback m_rttCb;
+  LossRateCallback m_lossRateCb;
   friend class SendPacketHistory;
 
   static const char *BWctrlActionStr(BWctrlAction action)
@@ -124,6 +130,11 @@ public:
   size_t m_newlyAckDataSize = 0;
   size_t m_lossCount = 0;
   size_t m_falseLossCount = 0;
+
+  size_t m_expected = 0;
+  size_t m_expectedPrior = 0;
+  size_t m_received = 0;
+  size_t m_receivedPrior = 0;
 
 private:
   SendPacketInfo *FindPacket (uint16_t seq);
