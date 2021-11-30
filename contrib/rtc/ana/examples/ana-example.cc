@@ -122,7 +122,6 @@ InstallTcp (Ptr<Node> sender, Ptr<Node> receiver, uint16_t port, float startTime
   serverApps.Stop (Seconds (stopTime));
 
   auto packetSink = DynamicCast<PacketSink> (serverApps.Get (0));
-  auto trace = CreateObject<BwTracer> ();
   tracer->SetPacketOverhead (IPV4_TCP_PACKET_OVERHEAD);
   tracer->Start (Seconds (startTime));
   tracer->Stop (Seconds (stopTime));
