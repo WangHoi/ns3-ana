@@ -21,8 +21,8 @@ SimEndpoint::SimEndpoint()
 	m_sender=nullptr;
 	m_receiver=nullptr;
 	m_packetSize=1000;
-	m_bitRate=8000000;
-	m_frameRate=40;//in ms
+	m_bitRate=64000;
+	m_frameRate=20;//in ms
 	m_lastGenerateDataTime=0;
 }
 SimEndpoint::~SimEndpoint(){}
@@ -369,7 +369,7 @@ void SimEndpoint::CalculateRtt(uint32_t keep_rtt)
 	m_rtt = (7 * m_rtt + keep_rtt) / 8;
 	if (m_rtt < 10)
 		m_rtt = 10;
-	//NS_LOG_INFO("rtt "<<m_rtt<<"rtt_var "<<m_rtt_var);
+	NS_LOG_INFO("rtt "<<m_rtt<<" rtt_var "<<m_rtt_var);
 	if(m_sender)
 	{
 		m_sender->UpdateRtt(m_rtt,m_rtt_var);

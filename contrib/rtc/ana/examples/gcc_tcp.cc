@@ -19,7 +19,7 @@
 NS_LOG_COMPONENT_DEFINE ("PACER_EXAMPLE");
 using namespace ns3;
 using namespace std;
-const uint32_t TOPO_DEFAULT_BW = 100000; // in bps: 1Mbps
+uint32_t TOPO_DEFAULT_BW_KBPS = 500; // in kbps: 1Mbps
 const uint32_t TOPO_DEFAULT_PDELAY = 50; // in ms:   50ms
 const uint32_t TOPO_DEFAULT_QDELAY = 300; // in ms:  300ms
 const uint32_t DEFAULT_PACKET_SIZE = 1000;
@@ -122,7 +122,7 @@ InstallTcp (Ptr<Node> sender, Ptr<Node> receiver, uint16_t port, float startTime
   tracer->Stop (Seconds (stopTime));
   packetSink->TraceConnectWithoutContext ("Rx", MakeCallback (&BwTracer::PacketTrace, tracer));
 }
-static double simDuration = 60;
+static double simDuration = 50;
 uint16_t servPort = 5432;
 uint16_t tcpServPort = 5000;
 float appStart = 0.0;
@@ -130,12 +130,16 @@ float appStop = simDuration - 2;
 int
 main (int argc, char *argv[])
 {
+  CommandLine cmd (__FILE__);
+  cmd.AddValue ("kbps", "Bottleneck bandwidth", TOPO_DEFAULT_BW_KBPS);
+  cmd.Parse (argc, argv);
+
   LogComponentEnable ("PACER_EXAMPLE", LOG_LEVEL_ALL);
   //LogComponentEnable("RazorHeader", LOG_LEVEL_ALL);
   // LogComponentEnable ("SimEndpoint", LOG_LEVEL_ALL);
   LogComponentEnable ("SimSender", LOG_LEVEL_ALL);
   //LogComponentEnable("SimReceiver",LOG_LEVEL_ALL);
-  const uint64_t linkBw = TOPO_DEFAULT_BW;
+  const uint64_t linkBw = TOPO_DEFAULT_BW_KBPS * 1000;
   const uint32_t msDelay = TOPO_DEFAULT_PDELAY;
   const uint32_t msQDelay = TOPO_DEFAULT_QDELAY;
   BwTracer bwtracer;

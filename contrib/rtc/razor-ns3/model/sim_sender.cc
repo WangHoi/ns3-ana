@@ -15,7 +15,7 @@ SimSender::SimSender()
 	m_first_ts=-1;
 	m_remb=0;//0 open receiver bandwidth estimate
 	m_paceTime=20;
-	m_segmentSize=500;
+	m_segmentSize=1000;
 	m_lossFraction=0;
 	m_paceQueueLen=3000; //300;  change it
 	m_maxSplitPackets=1000;

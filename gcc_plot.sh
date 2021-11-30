@@ -1,8 +1,8 @@
 #! /bin/sh
 output=gcc
-
 algo=gcc
-./waf --run "gcc_tcp " 2>${algo}.log || exit
+kbps=${1:-500}
+./waf --run "gcc_tcp --kbps=${kbps}" 2>${algo}.log || exit
 
 file1=${algo}.log
 tcp1_file=traces/gcc_tcp1_bw.txt
@@ -10,7 +10,7 @@ gnuplot<<!
 set xlabel "time/s" 
 set ylabel "rate/kbps"
 set xrange [0:60]
-set yrange [0:250]
+set yrange [0:${kbps}]
 set term "svg"
 set output "${output}_bw.svg"
 plot "${file1}" u 1:(\$2) title "rate" with lines lw 2, \

@@ -22,7 +22,7 @@ SimReceiver::SimReceiver()
 	m_framets=0;
 	m_playts=0;
 	m_maxts=100;
-	m_frameTime=100;
+	m_frameTime=20;
 	m_state=buffer_waiting;
 	m_recvFirstPacket=true;
 	m_statsDataLen=0;
@@ -57,7 +57,7 @@ void SimReceiver::Reset()
 	m_framets=0;
 	m_playts=0;
 	m_maxts=100;
-	m_frameTime=100;
+	m_frameTime=20;
 	m_state=buffer_waiting;
 	m_statsDataLen=0;
 	//m_lastStatsTime=0;
